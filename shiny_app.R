@@ -20,7 +20,7 @@ ui <- basicPage(
     
     sidebarPanel(
       "My sidebar",
-      textInput("myselect", "Caption", "Data Summary"),
+      textInput("myselect", "Caption", "hspter"),
       #verbatimTextOutput("value")
       tableOutput("values")
       ),
@@ -42,25 +42,35 @@ ui <- basicPage(
     )
 server <- function(input, output, session) { 
   f1 <- reactive({
-    if(input$myselect == "user_hspter"){
-      friends <- friends_hspter}
-    else {
-      friends <- friends_hc
-    }
+    #Modify in order to a) store new friend lists and b) look up friends that already exist
+    getFriends(screen_name=input$myselect, oauth_folder="~/Documents/Big_Data/t-t/credentials")
+    })
+  id1 <- reactive({
+    #ideol_est <- estimateIdeology(input$myselect, f1(), method="MLE")
+    estimateIdeology(input$myselect, f1(), method="MLE")
   })
+    
+#    if(input$myselect == "user_hspter"){
+ #     friends <- friends_hspter}
+  #  else {
+   #   friends <- friends_hc
+  #  }
+  
   t1 <- reactive({
     renderTable({
       data.frame(
         Name=input$myselect,
-        Value= (summary(results_hc))[2,1])
+        Value= (summary(id1()))[2,1])
     })
   })
   #Need to figure out how to make results a variable, but already friends is a variable so 
   #not sure how to keep them both as variables
 
   observe({
-    friends <- f1()
-    output$myplot <- renderPlot({plot(estimateIdeology(input$myselect, friends, method="MLE"))
+   #friends <- f1()
+   #ideol_est <- id1()
+    output$myplot <- renderPlot({plot(id1())
+      #Change plot to be a straight line through some point (0, some-y) and slope of -theta
     })  
     output$mytable <- renderDataTable({economics[,c("date", input$myselect)]})
     output$values <- t1()
