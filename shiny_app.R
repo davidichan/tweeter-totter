@@ -20,7 +20,7 @@ ui <- basicPage(
     
     sidebarPanel(
       "My sidebar",
-      textInput("myselect", "Caption", "hspter"),
+      textInput("myselect", "Enter twitter username (no @)", "hspter"),
       #verbatimTextOutput("value")
       tableOutput("values")
       ),
@@ -34,7 +34,7 @@ ui <- basicPage(
     
     mainPanel(
       tabsetPanel(
-        tabPanel("blah", plotOutput("myplot")),
+        tabPanel("Twitter Ideology Fit", plotOutput("myplot")),
         tabPanel("Table", dataTableOutput("mytable"))
       )
     )
@@ -59,8 +59,8 @@ server <- function(input, output, session) {
   t1 <- reactive({
     renderTable({
       data.frame(
-        Name=input$myselect,
-        Value= (summary(id1()))[2,1])
+        UserName = input$myselect,
+        Theta = (summary(id1()))[2,1])
     })
   })
   #Need to figure out how to make results a variable, but already friends is a variable so 
