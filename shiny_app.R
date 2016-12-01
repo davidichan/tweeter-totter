@@ -1,6 +1,14 @@
 library(ggplot2)
 library(shiny)
 library(tweetscores)
+
+addfriends <- function(usrname, fr_list=friends.list){
+  fr <- getFriends(screen_name=usrname, oauth_folder="~/Documents/Big_Data/t-t/credentials")
+  fr_list <- append(fr_list, list(tempname = fr))
+  names(fr_list)[names(fr_list) == "tempname"] <- usrname
+  return(fr_list)
+}
+
 ui <- basicPage(
   
   tags$head(
@@ -22,9 +30,7 @@ ui <- basicPage(
       "My sidebar",
       textInput("myselect", "Enter twitter username (no @)", "hspter"),
       #verbatimTextOutput("value")
-      tableOutput("values")
-      ),
-      
+      tableOutput("values")),
       
 #      selectInput("myselect", label = "Select variable",
 #                  choices = c("User1" = "user_hspter", "User2" = "user_hc"),
@@ -39,11 +45,19 @@ ui <- basicPage(
       )
     )
   )
-    )
+)
 server <- function(input, output, session) { 
   f1 <- reactive({
     #Modify in order to a) store new friend lists and b) look up friends that already exist
-    getFriends(screen_name=input$myselect, oauth_folder="~/Documents/Big_Data/t-t/credentials")
+    #getFriends(screen_name=input$myselect, oauth_folder="~/Documents/Big_Data/t-t/credentials")
+    if(input$myselect %in% names(friends.list)){
+        #if name is in list, then use friends list in here
+        friends.list[[input$myselect]]
+      } else {
+        #if name is not in list, then create a new entry in the list
+        friends.list <<- addfriends(input$myselect, friends.list)
+        friends.list[[input$myselect]]
+      }
     })
   id1 <- reactive({
     #ideol_est <- estimateIdeology(input$myselect, f1(), method="MLE")
@@ -57,6 +71,7 @@ server <- function(input, output, session) {
   #  }
   
   t1 <- reactive({
+
     renderTable({
       data.frame(
         UserName = input$myselect,
@@ -69,9 +84,10 @@ server <- function(input, output, session) {
   observe({
    #friends <- f1()
    #ideol_est <- id1()
-    output$myplot <- renderPlot({plot(id1())
+
+    
+    output$myplot <- renderPlot({plot(id1())})
       #Change plot to be a straight line through some point (0, some-y) and slope of -theta
-    })  
     output$mytable <- renderDataTable({economics[,c("date", input$myselect)]})
     output$values <- t1()
   })
