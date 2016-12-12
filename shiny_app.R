@@ -103,7 +103,7 @@ server <- function(input, output, session) {
       data.frame(
         UserName = input$myselect,
         #Theta = (summary(id1()))[2,1])
-        "Twitter ideology score" = id1())
+        "Twitter ideology score" = format(round(id1(), 2), nsmall = 2))
     })
   })
   
@@ -117,14 +117,15 @@ server <- function(input, output, session) {
       indx <- sample(dim(elites.left)[1],size=5)
       temp.df <- elites.left[indx,]
       Username <- paste0("<a href='https://twitter.com/",temp.df[,1],"'>",temp.df[,1],"</a>")
-      renderDataTable({cbind(Username, elites.left[indx,2])}, escape = FALSE, options = list(dom = ''))
+      renderDataTable({cbind(Username, format(round(elites.left[indx,2], 2), nsmall = 2))}, escape = FALSE, options = list(dom = ''))
       #renderTable({elites.left[sample(dim(elites.left)[1], size=5),]})
     } else if(id1() <0){
       indx <- sample(dim(elites.right)[1],size=5)
       temp.df <- elites.right[indx,]
       Username <- paste0("<a href='https://twitter.com/",temp.df[,1],"'>",temp.df[,1],"</a>")
-      renderDataTable({cbind(Username, elites.right[indx,2])}, escape = FALSE, options = list(dom = ''))
+      renderDataTable({cbind(Username, format(round(elites.right[indx,2], 2), nsmall = 2))}, escape = FALSE, options = list(dom = ''))
       #renderTable({elites.right[sample(dim(elites.right)[1], size=5),]})
+      
     }
   })
   
@@ -134,13 +135,13 @@ server <- function(input, output, session) {
       temp.df <- mortals.left[indx,]
       #links <- paste0("https://twitter.com/",temp.df[,1])
       Username <- paste0("<a href='https://twitter.com/",temp.df[,1],"'>",temp.df[,1],"</a>")
-      renderDataTable({cbind(Username, mortals.left[indx,2])}, escape = FALSE, options = list(dom = ''))
+      renderDataTable({cbind(Username, format(round(mortals.left[indx,2], 2), nsmall = 2))}, escape = FALSE, options = list(dom = ''))
     } else if(id1() <0){
       indx <- sample(dim(mortals.right)[1],size=5)
       temp.df <- mortals.right[indx,]
       #links <- paste0("https://twitter.com/",temp.df[,1])
       Username <- paste0("<a href='https://twitter.com/",temp.df[,1],"'>",temp.df[,1],"</a>")
-      renderDataTable({cbind(Username, mortals.right[indx,2])}, escape = FALSE, options = list(dom = ''))
+      renderDataTable({cbind(Username, format(round(mortals.right[indx,2], 2), nsmall = 2))}, escape = FALSE, options = list(dom = ''))
     }
   })
 
