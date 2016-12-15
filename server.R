@@ -1,10 +1,10 @@
 library(ggplot2)
 library(shiny)
 library(tweetscores)
-#devtools::session_info('DT')
+
 
 addfriends <- function(usrname, fr_list=friends.list){
-  fr <- getFriends(screen_name=usrname, oauth_folder="credentials")
+  fr <- getFriends(screen_name=usrname, oauth_folder="/srv/shiny-server/blah2/credentials")
   fr_list <- append(fr_list, list(tempname = fr))
   names(fr_list)[names(fr_list) == "tempname"] <- usrname
   return(fr_list)
@@ -31,41 +31,14 @@ plot.estId2 <- function(x, user){
                        lim=range(data[,2:4]))
   suppressMessages(suppressWarnings(print(pq)))
 }
-load("t-t_temp.RData")
+#load("t-t_temp.RData")
+#cat(file=stderr(), "Trying to get friends...", addfriends("mehamp", friends.list))
+load("/mnt/tt-home/tweeter_totter_data/mortals_left.RData")
+load("/mnt/tt-home/tweeter_totter_data/mortals_right.RData")
+load("/mnt/tt-home/tweeter_totter_data/elites.RData")
+load("/mnt/tt-home/tweeter_totter_data/friends_list.RData")
 
-ui <- basicPage(
-  tags$head(
-    tags$style(HTML("
-                    h1{color:black;}
-                    h4{
-                    color:grey;
-                    font-style:italic;
-                    }
-                    "))
-    ),
-  
-  h1("Tweeter-totter"),
-  h4("Find balance in your tweets"),
-  
-  sidebarLayout(
-    sidebarPanel("",
-      textInput("myselect", "Enter a twitter username (no @)", "neiltyson"),
-      #verbatimTextOutput("value")
-      tableOutput("values")),
-      
-    mainPanel(
-      helpText("See where your twitter account lies on the ideological spectrum"),
-      tabPanel("Twitter Ideology Fit", plotOutput("myplot")),
-      helpText("Consider following some of these accounts to help balance your feed"),
-      tabsetPanel(
-        tabPanel("Twitter elites to consider following", dataTableOutput("elitestable")),
-        tabPanel("Some twitter mortals to consider following", dataTableOutput("mytable"))),
-      helpText("Built using the ", a("tweetscores package", href="https://github.com/pablobarbera/twitter_ideology")),
-      helpText("Questions? Email tweeter.totter.xyz@gmail.com")
-          )
-  )
-)
-server <- function(input, output, session) { 
+serverServer <- function(input, output, session) {
   ### Gets friends list for calculation of ideal position
   f1 <- reactive({
     #Modify in order to a) store new friend lists and b) look up friends that already exist
@@ -76,6 +49,7 @@ server <- function(input, output, session) {
       } else {
         #if name is not in list, then create a new entry in the list
         friends.list <<- addfriends(input$myselect, friends.list)
+	save(friends.list, file="/mnt/tt-home/tweeter_totter_data/friends_list.RData")
         friends.list[[input$myselect]]
       }
     })
@@ -91,45 +65,50 @@ server <- function(input, output, session) {
     if(!input$myselect %in% elites.df$names){
       if(user.score > 0 & !input$myselect %in% mortals.right$names){
         mortals.right <<- rbind(mortals.right, data.frame(names=input$myselect, scores=user.score))
+        save(mortals.right, file="/mnt/tt-home/tweeter_totter_data/mortals_right.RData")
       } else if(user.score <0 & !input$myselect %in% mortals.left$names){
         mortals.left <<- rbind(mortals.left, data.frame(names=input$myselect, scores=user.score))
+	save(mortals.left, file="/mnt/tt-home/tweeter_totter_data/mortals_left.RData")
       }
     }
     return(user.score)
   })
-  
-  ### Gets ideal value Theta for user 
+
+  ### Creates output of ideal value 
   t1 <- reactive({
+    if(is.character(id1())){
+      statement <- id1()
+    } else {
+      statement <- format(round(id1(), 2), nsmall = 2)
+    }
     renderTable({
       data.frame(
         UserName = input$myselect,
         #Theta = (summary(id1()))[2,1])
-        "Twitter ideology score" = format(round(id1(), 2), nsmall = 2))
+        #"Twitter ideology score" = format(round(id1(), 2), nsmall = 2))
+        "Twitter ideology score" = statement)
     })
   })
-  
-  ### Creates teeter-totter plot
-# pl1 <- reactive({
-#   plot.estId2(id1(), input$myselect)
-#   })
-  
-  tb1 <- reactive({
+ tb1 <- reactive({
     if(id1() > 0){
       indx <- sample(dim(elites.left)[1],size=5)
       temp.df <- elites.left[indx,]
       Username <- paste0("<a href='https://twitter.com/",temp.df[,1],"'>",temp.df[,1],"</a>")
+      #cat(file=stderr(), "Elites.left[indx,2]", elites.left[indx,2])
       renderDataTable({cbind(Username, format(round(elites.left[indx,2], 2), nsmall = 2))}, escape = FALSE, options = list(dom = ''))
+      #renderDataTable({cbind(Username, (elites.left[indx,2]))}, escape = FALSE, options = list(dom = ''))
       #renderTable({elites.left[sample(dim(elites.left)[1], size=5),]})
     } else if(id1() <0){
       indx <- sample(dim(elites.right)[1],size=5)
       temp.df <- elites.right[indx,]
       Username <- paste0("<a href='https://twitter.com/",temp.df[,1],"'>",temp.df[,1],"</a>")
       renderDataTable({cbind(Username, format(round(elites.right[indx,2], 2), nsmall = 2))}, escape = FALSE, options = list(dom = ''))
+      #renderDataTable({cbind(Username, elites.right[indx,2])}, escape = FALSE, options = list(dom = ''))
       #renderTable({elites.right[sample(dim(elites.right)[1], size=5),]})
-      
+
     }
   })
-  
+
   tb2 <- reactive({
     if(id1() > 0){
       indx <- sample(dim(mortals.left)[1],size=5)
@@ -137,27 +116,26 @@ server <- function(input, output, session) {
       #links <- paste0("https://twitter.com/",temp.df[,1])
       Username <- paste0("<a href='https://twitter.com/",temp.df[,1],"'>",temp.df[,1],"</a>")
       renderDataTable({cbind(Username, format(round(mortals.left[indx,2], 2), nsmall = 2))}, escape = FALSE, options = list(dom = ''))
+      #renderDataTable({cbind(Username, mortals.left[indx,2])}, escape = FALSE, options = list(dom = ''))
     } else if(id1() <0){
       indx <- sample(dim(mortals.right)[1],size=5)
       temp.df <- mortals.right[indx,]
       #links <- paste0("https://twitter.com/",temp.df[,1])
       Username <- paste0("<a href='https://twitter.com/",temp.df[,1],"'>",temp.df[,1],"</a>")
       renderDataTable({cbind(Username, format(round(mortals.right[indx,2], 2), nsmall = 2))}, escape = FALSE, options = list(dom = ''))
+      #renderDataTable({cbind(Username, mortals.right[indx,2])}, escape = FALSE, options = list(dom = ''))
     }
   })
 
   observe({
     output$myplot <- renderPlot({
-      #pl1()
       plot.estId2(id1(), input$myselect)
       })
-      #plot(id1())})
-      #Change plot to be a straight line through some point (0, some-y) and slope of -theta
     output$mytable <- tb2()
     output$elitestable <- tb1()
-    
     output$values <- t1()
+    load("/mnt/tt-home/tweeter_totter_data/friends_list.RData")
+    load("/mnt/tt-home/tweeter_totter_data/mortals_right.RData")
+    load("/mnt/tt-home/tweeter_totter_data/mortals_left.RData")
   })
 }
-
-shinyApp(ui = ui, server = server)
