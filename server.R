@@ -4,7 +4,7 @@ library(tweetscores)
 
 
 addfriends <- function(usrname, fr_list=friends.list){
-  fr <- getFriends(screen_name=usrname, oauth_folder="/srv/shiny-server/blah2/credentials")
+  fr <- getFriends(screen_name=usrname, oauth_folder="/srv/shiny-server/tweeter-totter/credentials")
   fr_list <- append(fr_list, list(tempname = fr))
   names(fr_list)[names(fr_list) == "tempname"] <- usrname
   return(fr_list)
@@ -58,15 +58,16 @@ serverServer <- function(input, output, session) {
     #ideol_est <- estimateIdeology(input$myselect, f1(), method="MLE")
     #estimateIdeology(input$myselect, f1(), method="MLE")
     user.score <- tryCatch({
-      estimateIdeology2(input$myselect, f1())
+      score <- estimateIdeology2(input$myselect, f1())
+       round(score,2)
     }, error = function(e){
         print("Account doesn't follow any twitter elites")
       })
     if(!input$myselect %in% elites.df$names){
-      if(user.score > 0 & !input$myselect %in% mortals.right$names){
+      if(user.score > 0 & !input$myselect %in% mortals.right$names &! is.character(user.score)){
         mortals.right <<- rbind(mortals.right, data.frame(names=input$myselect, scores=user.score))
         save(mortals.right, file="/mnt/tt-home/tweeter_totter_data/mortals_right.RData")
-      } else if(user.score <0 & !input$myselect %in% mortals.left$names){
+      } else if(user.score <0 & !input$myselect %in% mortals.left$names &! is.character(user.score)){
         mortals.left <<- rbind(mortals.left, data.frame(names=input$myselect, scores=user.score))
 	save(mortals.left, file="/mnt/tt-home/tweeter_totter_data/mortals_left.RData")
       }

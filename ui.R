@@ -5,7 +5,8 @@ library(tweetscores)
 shinyUI <- basicPage(
   tags$head(
     tags$style(HTML("
-                    h1{color:black;}
+                    h1{color:black;
+	        	font-style:italic;}
                     h4{
                     color:grey;
                     font-style:italic;
@@ -14,7 +15,8 @@ shinyUI <- basicPage(
     ),
 
   h1("Tweeter-totter"),
-  h4("Find balance in your tweets"),
+  h4("Find balance in your tweets."),
+  h4("Enter your twitter user name below and get an estimate of your twitter feed ideology. Check out some of the twitter accounts you could follow to balance-out your feed in the tables below."),
 
   sidebarLayout(
     sidebarPanel("",
@@ -30,7 +32,7 @@ shinyUI <- basicPage(
         tabPanel("Twitter elites to consider following", dataTableOutput("elitestable")),
         tabPanel("Some twitter mortals to consider following", dataTableOutput("mytable"))),
       helpText("Built using the ", a("tweetscores package", href="https://github.com/pablobarbera/twitter_ideology")),
-      helpText("Questions? Email tweeter.totter.xyz@gmail.com")
+      helpText("Questions? Tweet me ", a("@tweetertotterxy", href="https://twitter.com/tweetertotterxy"))
           )
   )
 )
