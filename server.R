@@ -4,7 +4,7 @@ library(tweetscores)
 
 
 addfriends <- function(usrname, fr_list=friends.list){
-  fr <- getFriends(screen_name=usrname, oauth_folder="/srv/shiny-server/tweeter-totter/credentials")
+  fr <- getFriends(screen_name=usrname, oauth_folder=paste0(rootp,"credentials"))
   fr_list <- append(fr_list, list(tempname = fr))
   names(fr_list)[names(fr_list) == "tempname"] <- usrname
   return(fr_list)
@@ -31,14 +31,33 @@ plot.estId2 <- function(x, user){
                        lim=range(data[,2:4]))
   suppressMessages(suppressWarnings(print(pq)))
 }
-#load("t-t_temp.RData")
-#cat(file=stderr(), "Trying to get friends...", addfriends("mehamp", friends.list))
-load("/mnt/tt-home/tweeter_totter_data/mortals_left.RData")
-load("/mnt/tt-home/tweeter_totter_data/mortals_right.RData")
-load("/mnt/tt-home/tweeter_totter_data/elites.RData")
-load("/mnt/tt-home/tweeter_totter_data/friends_list.RData")
+
+rootp <- ""
+load(paste0(rootp,"mortals_left.RData"))
+load(paste0(rootp,"mortals_right.RData"))
+load(paste0(rootp,"elites.RData"))
+load(paste0(rootp,"friends_list.RData"))
+load(paste0(rootp,"user_info.RData"))
+
+
 
 serverServer <- function(input, output, session) {
+  ### Gets user info for determining whether to get friends and for table output
+  user_info <- reactive({
+    #Modify in order to a) store new friend lists and b) look up friends that already exist
+    #getFriends(screen_name=input$myselect, oauth_folder="~/Documents/Big_Data/t-t/credentials")
+    if(input$myselect %in% names(user.info)){
+      #if name is in list, then return that item
+      user.info[user.info$screen_name==input$myselect,]
+    } else {
+      #if name is not in list, then create a new entry in the list
+      temp.info <<- getUsersBatch(screen_names = input$myselect, oauth_folder = "credentials")
+      user.info <<- rbind(user.info, temp.info)
+      save(user.info, file=(paste0(rootp,"user_info.RData")))
+      user.info[user.info$screen_name==input$myselect,]
+    }
+  })
+  
   ### Gets friends list for calculation of ideal position
   f1 <- reactive({
     #Modify in order to a) store new friend lists and b) look up friends that already exist
@@ -49,7 +68,7 @@ serverServer <- function(input, output, session) {
       } else {
         #if name is not in list, then create a new entry in the list
         friends.list <<- addfriends(input$myselect, friends.list)
-	save(friends.list, file="/mnt/tt-home/tweeter_totter_data/friends_list.RData")
+	      save(friends.list, file=(paste0(rootp,"friends_list.RData")))
         friends.list[[input$myselect]]
       }
     })
@@ -61,15 +80,15 @@ serverServer <- function(input, output, session) {
       score <- estimateIdeology2(input$myselect, f1())
        round(score,2)
     }, error = function(e){
-        print("Account doesn't follow any twitter elites")
+        print("Cannot estimate ideology.")
       })
     if(!input$myselect %in% elites.df$names){
       if(user.score > 0 & !input$myselect %in% mortals.right$names &! is.character(user.score)){
         mortals.right <<- rbind(mortals.right, data.frame(names=input$myselect, scores=user.score))
-        save(mortals.right, file="/mnt/tt-home/tweeter_totter_data/mortals_right.RData")
+        save(mortals.right, file=(paste0(rootp,"mortals_right.RData")))
       } else if(user.score <0 & !input$myselect %in% mortals.left$names &! is.character(user.score)){
         mortals.left <<- rbind(mortals.left, data.frame(names=input$myselect, scores=user.score))
-	save(mortals.left, file="/mnt/tt-home/tweeter_totter_data/mortals_left.RData")
+	      save(mortals.left, file=(paste0(rootp,"mortals_left.RData")))
       }
     }
     return(user.score)
@@ -87,25 +106,22 @@ serverServer <- function(input, output, session) {
         UserName = input$myselect,
         #Theta = (summary(id1()))[2,1])
         #"Twitter ideology score" = format(round(id1(), 2), nsmall = 2))
-        "Twitter ideology score" = statement)
+        TwitterIdeologyScore = statement)
     })
   })
  tb1 <- reactive({
     if(id1() > 0){
       indx <- sample(dim(elites.left)[1],size=5)
       temp.df <- elites.left[indx,]
+      temp.df <- temp.df[order(temp.df$scores, decreasing = T),]
       Username <- paste0("<a href='https://twitter.com/",temp.df[,1],"'>",temp.df[,1],"</a>")
-      #cat(file=stderr(), "Elites.left[indx,2]", elites.left[indx,2])
-      renderDataTable({cbind(Username, format(round(elites.left[indx,2], 2), nsmall = 2))}, escape = FALSE, options = list(dom = ''))
-      #renderDataTable({cbind(Username, (elites.left[indx,2]))}, escape = FALSE, options = list(dom = ''))
-      #renderTable({elites.left[sample(dim(elites.left)[1], size=5),]})
+      renderDataTable({cbind(Username, Score = format(round(temp.df[,2], 2), nsmall = 2), Description = temp.df[,5])}, escape = FALSE, options = list(dom = 't'))
     } else if(id1() <0){
       indx <- sample(dim(elites.right)[1],size=5)
       temp.df <- elites.right[indx,]
+      temp.df <- temp.df[order(temp.df$scores, decreasing = F),]
       Username <- paste0("<a href='https://twitter.com/",temp.df[,1],"'>",temp.df[,1],"</a>")
-      renderDataTable({cbind(Username, format(round(elites.right[indx,2], 2), nsmall = 2))}, escape = FALSE, options = list(dom = ''))
-      #renderDataTable({cbind(Username, elites.right[indx,2])}, escape = FALSE, options = list(dom = ''))
-      #renderTable({elites.right[sample(dim(elites.right)[1], size=5),]})
+      renderDataTable({cbind(Username, Score = format(round(temp.df[,2], 2), nsmall = 2), Description = temp.df[,5])}, escape = FALSE, options = list(dom = 't'))
 
     }
   })
@@ -114,17 +130,21 @@ serverServer <- function(input, output, session) {
     if(id1() > 0){
       indx <- sample(dim(mortals.left)[1],size=5)
       temp.df <- mortals.left[indx,]
+      temp.df <- temp.df[order(temp.df$scores, decreasing = T),]
       #links <- paste0("https://twitter.com/",temp.df[,1])
       Username <- paste0("<a href='https://twitter.com/",temp.df[,1],"'>",temp.df[,1],"</a>")
-      renderDataTable({cbind(Username, format(round(mortals.left[indx,2], 2), nsmall = 2))}, escape = FALSE, options = list(dom = ''))
-      #renderDataTable({cbind(Username, mortals.left[indx,2])}, escape = FALSE, options = list(dom = ''))
+      describe <- lapply(temp.df[,1], function(x) user.info[user.info$screen_name == x,4])
+      renderDataTable({cbind(Username, Score=format(round(temp.df[,2], 2), nsmall = 2), Description = describe)}, escape = FALSE, options = list(dom = 't'))
+      #renderDataTable({cbind(Username, mortals.left[indx,2])}, escape = FALSE, options = list(dom = 'ft'))
     } else if(id1() <0){
       indx <- sample(dim(mortals.right)[1],size=5)
       temp.df <- mortals.right[indx,]
+      temp.df <- temp.df[order(temp.df$scores, decreasing = F),]
       #links <- paste0("https://twitter.com/",temp.df[,1])
       Username <- paste0("<a href='https://twitter.com/",temp.df[,1],"'>",temp.df[,1],"</a>")
-      renderDataTable({cbind(Username, format(round(mortals.right[indx,2], 2), nsmall = 2))}, escape = FALSE, options = list(dom = ''))
-      #renderDataTable({cbind(Username, mortals.right[indx,2])}, escape = FALSE, options = list(dom = ''))
+      describe <- lapply(temp.df[,1], function(x) user.info[user.info$screen_name == x,4])
+      renderDataTable({cbind(Username, Score=format(round(temp.df[,2], 2), nsmall = 2), Description = describe)}, escape = FALSE, options = list(dom = 't'))
+      #renderDataTable({cbind(Username, mortals.right[indx,2])}, escape = FALSE, options = list(dom = 'ft'))
     }
   })
 
@@ -135,8 +155,9 @@ serverServer <- function(input, output, session) {
     output$mytable <- tb2()
     output$elitestable <- tb1()
     output$values <- t1()
-    load("/mnt/tt-home/tweeter_totter_data/friends_list.RData")
-    load("/mnt/tt-home/tweeter_totter_data/mortals_right.RData")
-    load("/mnt/tt-home/tweeter_totter_data/mortals_left.RData")
+    load(paste0(rootp,"friends_list.RData"))
+    load(paste0(rootp,"mortals_right.RData"))
+    load(paste0(rootp,"mortals_left.RData"))
+    load(paste0(rootp,"user_info.RData"))
   })
 }
