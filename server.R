@@ -4,7 +4,7 @@ library(tweetscores)
 
 
 addfriends <- function(usrname, fr_list=friends.list){
-  fr <- getFriends(screen_name=usrname, oauth_folder=paste0(rootp,"credentials"))
+  fr <- getFriends(screen_name=usrname, oauth_folder="/mnt/tt-home/tweeter-totter/credentials")
   fr_list <- append(fr_list, list(tempname = fr))
   names(fr_list)[names(fr_list) == "tempname"] <- usrname
   return(fr_list)
@@ -32,7 +32,7 @@ plot.estId2 <- function(x, user){
   suppressMessages(suppressWarnings(print(pq)))
 }
 
-rootp <- ""
+rootp <- "/mnt/tt-home/tweeter_totter_data/"
 load(paste0(rootp,"mortals_left.RData"))
 load(paste0(rootp,"mortals_right.RData"))
 load(paste0(rootp,"elites.RData"))
@@ -42,22 +42,6 @@ load(paste0(rootp,"user_info.RData"))
 
 
 serverServer <- function(input, output, session) {
-  ### Gets user info for determining whether to get friends and for table output
-  user_info <- reactive({
-    #Modify in order to a) store new friend lists and b) look up friends that already exist
-    #getFriends(screen_name=input$myselect, oauth_folder="~/Documents/Big_Data/t-t/credentials")
-    if(input$myselect %in% names(user.info)){
-      #if name is in list, then return that item
-      user.info[user.info$screen_name==input$myselect,]
-    } else {
-      #if name is not in list, then create a new entry in the list
-      temp.info <<- getUsersBatch(screen_names = input$myselect, oauth_folder = "credentials")
-      user.info <<- rbind(user.info, temp.info)
-      save(user.info, file=(paste0(rootp,"user_info.RData")))
-      user.info[user.info$screen_name==input$myselect,]
-    }
-  })
-  
   ### Gets friends list for calculation of ideal position
   f1 <- reactive({
     #Modify in order to a) store new friend lists and b) look up friends that already exist
@@ -106,7 +90,7 @@ serverServer <- function(input, output, session) {
         UserName = input$myselect,
         #Theta = (summary(id1()))[2,1])
         #"Twitter ideology score" = format(round(id1(), 2), nsmall = 2))
-        TwitterIdeologyScore = statement)
+        "TwitterIdeologyScore" = statement)
     })
   })
  tb1 <- reactive({
@@ -159,5 +143,14 @@ serverServer <- function(input, output, session) {
     load(paste0(rootp,"mortals_right.RData"))
     load(paste0(rootp,"mortals_left.RData"))
     load(paste0(rootp,"user_info.RData"))
+    ### Gets user info for determining whether to get friends and for table output
+    if(input$myselect %in% user.info$screen_name){
+      #if name is in list, then don't do anything
+    } else {
+      #if name is not in list, then create a new entry in the list
+      temp.info <<- getUsersBatch(screen_names = input$myselect, oauth_folder = "/mnt/tt-home/tweeter-totter/credentials")
+      user.info <<- rbind(user.info, temp.info)
+      save(user.info, file=(paste0(rootp,"user_info.RData")))
+    }
   })
 }
