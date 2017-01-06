@@ -2,9 +2,16 @@ library(ggplot2)
 library(shiny)
 library(tweetscores)
 
+rootp <- ""
+credentials_folder <- "credentials"
+load(paste0(rootp,"mortals_left.RData"))
+load(paste0(rootp,"mortals_right.RData"))
+load(paste0(rootp,"elites.RData"))
+load(paste0(rootp,"friends_list.RData"))
+load(paste0(rootp,"user_info.RData"))
 
 addfriends <- function(usrname, fr_list=friends.list){
-  fr <- getFriends(screen_name=usrname, oauth_folder="/mnt/tt-home/tweeter-totter/credentials")
+  fr <- getFriends(screen_name=usrname, oauth_folder=credentials_folder)
   fr_list <- append(fr_list, list(tempname = fr))
   names(fr_list)[names(fr_list) == "tempname"] <- usrname
   return(fr_list)
@@ -32,15 +39,6 @@ plot.estId2 <- function(x, user){
   suppressMessages(suppressWarnings(print(pq)))
 }
 
-rootp <- "/mnt/tt-home/tweeter_totter_data/"
-load(paste0(rootp,"mortals_left.RData"))
-load(paste0(rootp,"mortals_right.RData"))
-load(paste0(rootp,"elites.RData"))
-load(paste0(rootp,"friends_list.RData"))
-load(paste0(rootp,"user_info.RData"))
-
-
-
 serverServer <- function(input, output, session) {
   ### Gets friends list for calculation of ideal position
   f1 <- reactive({
@@ -61,6 +59,15 @@ serverServer <- function(input, output, session) {
     #ideol_est <- estimateIdeology(input$myselect, f1(), method="MLE")
     #estimateIdeology(input$myselect, f1(), method="MLE")
     user.score <- tryCatch({
+      ### Gets user info for determining whether to get friends and for table output
+      if(input$myselect %in% user.info$screen_name){
+        #if name is in list, then don't do anything
+      } else {
+        #if name is not in list, then create a new entry in the list
+        temp.info <<- getUsersBatch(screen_names = input$myselect, oauth_folder = credentials_folder)
+        user.info <<- rbind(user.info, temp.info)
+        save(user.info, file=(paste0(rootp,"user_info.RData")))
+      }
       score <- estimateIdeology2(input$myselect, f1())
        round(score,2)
     }, error = function(e){
@@ -143,14 +150,5 @@ serverServer <- function(input, output, session) {
     load(paste0(rootp,"mortals_right.RData"))
     load(paste0(rootp,"mortals_left.RData"))
     load(paste0(rootp,"user_info.RData"))
-    ### Gets user info for determining whether to get friends and for table output
-    if(input$myselect %in% user.info$screen_name){
-      #if name is in list, then don't do anything
-    } else {
-      #if name is not in list, then create a new entry in the list
-      temp.info <<- getUsersBatch(screen_names = input$myselect, oauth_folder = "/mnt/tt-home/tweeter-totter/credentials")
-      user.info <<- rbind(user.info, temp.info)
-      save(user.info, file=(paste0(rootp,"user_info.RData")))
-    }
   })
 }
