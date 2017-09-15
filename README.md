@@ -1,6 +1,6 @@
 # tweeter-totter
 
-[Tweeter-totter] (http://www.tweeter-totter.xyz)
+[Tweeter-totter](http://www.tweeter-totter.xyz)
 
 R Shiny application that lets users enter a twitter handle and get back an estimate of the twitter account’s ideological position. Based on the resulting ideology score, provides suggestions for which twitter accounts could be followed from the other side of the ideological spectrum in order to balance out the account’s twitter feed. The application is built on the [tweetscores package](https://github.com/pablobarbera/twitter_ideology) developed by Pablo Barbera. 
 
